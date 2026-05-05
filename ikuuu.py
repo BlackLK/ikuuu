@@ -7,12 +7,16 @@ session = requests.session()
 # server酱
 SCKEY = os.environ.get('SCKEY')
 
-login_url = 'https://ikuuu.pw/auth/login'
-check_url = 'https://ikuuu.pw/user/checkin'
-info_url = 'https://ikuuu.pw/user/profile'
-logout_url='https://ikuuu.pw/user/logout'
+BASE_URL = 'https://ikuuu.win'
+base_host = BASE_URL.replace('https://', '').replace('http://', '')
+login_url = f'{BASE_URL}/auth/login'
+check_url = f'{BASE_URL}/user/checkin'
+info_url = f'{BASE_URL}/user/profile'
+logout_url=f'{BASE_URL}/user/logout'
 header = {
-        'origin': 'https://ikuuu.me',
+        'origin': BASE_URL,
+        'referer': login_url,
+        'x-requested-with': 'XMLHttpRequest',
         'user-agent':'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/109.0.0.0 Safari/537.36'
 }
 # 从环境变量读取账号，格式: 邮箱#密码，多账号用换行分隔
@@ -35,8 +39,20 @@ for account in data:
   try:
       print('进行登录...')
       print(account.get('email'))
-      response = json.loads(session.post(url=login_url,headers=header,data=account).text)
+      login_data = account.copy()
+      login_data.update({
+          'host': base_host,
+          'code': '',
+          'twofa_step': 0,
+          'captcha_result': '',
+          'remember_me': '',
+          'pageLoadedAt': int(time.time() * 1000)
+      })
+      response = json.loads(session.post(url=login_url,headers=header,data=login_data).text)
       print(response['msg'])
+      if response.get('ret') != 1:
+          content = response.get('msg', '登录失败')
+          continue
     # 获取账号名称
       info_html = session.get(url=info_url,headers=header).text
       #print(info_html)
@@ -47,7 +63,7 @@ for account in data:
       print(result['msg'])
       content = result['msg']
     # 进行推送
-      if SCKEY != '':
+      if SCKEY:
           push_url = 'https://sctapi.ftqq.com/{}.send?title=ikuuu自动签到任务提示&desp={}'.format(SCKEY, content)
           requests.post(url=push_url)
           print('推送成功')
@@ -57,5 +73,5 @@ for account in data:
   except:
       content = '签到失败'
       print(content)
-      if SCKEY != '':
+      if SCKEY:
           push_url = 'https://sctapi.ftqq.com/{}.send?title=ikuuu自动签到任务提示&desp={}'.format(SCKEY, content)
