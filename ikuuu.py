@@ -15,8 +15,22 @@ header = {
         'origin': 'https://ikuuu.me',
         'user-agent':'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/109.0.0.0 Safari/537.36'
 }
-# 多个账户名密码
-data = [{'email': '12345@gmail.com','passwd': '12345'},{'email': '账号2@gmail.com','passwd': '12345'}] 
+# 从环境变量读取账号，格式: 邮箱#密码，多账号用换行分隔
+accounts_env = os.environ.get('IKUUU_ACCOUNTS', '')
+data = []
+if accounts_env:
+    for line in accounts_env.splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        parts = line.split('#')
+        if len(parts) >= 2:
+            data.append({'email': parts[0], 'passwd': parts[1]})
+        else:
+            print(f'账号格式错误，已跳过: {line}')
+else:
+    print('未配置环境变量 IKUUU_ACCOUNTS，请设置后重试')
+    exit(1)
 for account in data:
   try:
       print('进行登录...')
